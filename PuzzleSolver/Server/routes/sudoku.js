@@ -221,9 +221,9 @@ router.post('/solve', function (req, res) {
     var grid = req.body.sudoku;
     var values = solve(grid);
     var solution = '';
-    for (var s in values) {
-        solution += values[s];
-    }
+    Object.keys(values).sort().forEach(function (square) {
+        solution += values[square];
+    });
     res.status(200).json({solution: solution});
 });
 
