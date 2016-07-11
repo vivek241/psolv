@@ -1,5 +1,5 @@
 /**
- * Created by vmurali on 6/17/16.
+ * Created by vmurali on 7/8/16.
  */
 
 'use strict';
@@ -7,34 +7,35 @@
 var _ = require('lodash');
 var router = require('express').Router();
 
+// Initial setup
 var cross = function (A, B) {
     var result = [];
-    A.forEach(function (a) {
-        B.forEach(function (b) {
-            result.push(a + b);
-        });
-    });
+    for (var i = 0; i < A.length; i++) {
+        for (var j = 0; j < B.length; j++) {
+            result.push(A[i] + B[j]);
+        }
+    }
     return result;
 };
 
 var i, j;
-var rowNames = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
-var columnNames = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
+var rows = 'ABCDEFGHI';
+var columns = '123456789';
 
-var squares = cross(rowNames, columnNames);
+var squares = cross(rows, columns);
 
 var unitlist = [];
-rowNames.forEach(function (rowName) {
-    unitlist.push(cross([rowName], columnNames));
-});
-columnNames.forEach(function (columnName) {
-    unitlist.push(cross(rowNames, [columnName]));
-});
-for (i = 0; i < 9; i += 3) {
-    var rowNamesSubArray = rowNames.slice(i, i + 3);
-    for (j = 0; j < 9; j += 3) {
-        var columnNamesSubArray = columnNames.slice(j, j + 3);
-        unitlist.push(cross(rowNamesSubArray, columnNamesSubArray));
+for (i = 0; i < rows.length; i++) {
+    unitlist.push(cross(rows[i], columns));
+}
+for (i = 0; i < columns.length; i++) {
+    unitlist.push(cross(rows, columns[i]));
+}
+for (i = 0; i < rows.length; i += 3) {
+    var rowsSub = rows.slice(i, i + 3);
+    for (j = 0; j < columns.length; j += 3) {
+        var columnsSub = columns.slice(j, j + 3);
+        unitlist.push(cross(rowsSub, columnsSub));
     }
 }
 
@@ -64,12 +65,12 @@ squares.forEach(function (square) {
     });
 });
 
-var getGridValues = function (gridArray) {
+var getGridValues = function (grid) {
     var gridValues = {};
-    for (var i = 0; i < 81; i++) {
+    for (var i = 0; i < grid.length; i++) {
         var square = squares[i];
-        var gridValue = gridArray[i];
-        gridValues[square] = (columnNames.indexOf(gridValue) !== -1 ? gridValue : '.');
+        var value = grid[i];
+        gridValues[square] = (columns.indexOf(value) !== -1 ? value : '.');
     }
     return gridValues;
 };
@@ -77,28 +78,27 @@ var getGridValues = function (gridArray) {
 var parseGrid = function (grid) {
     var values = {};
     squares.forEach(function (square) {
-        values[square] = columnNames;
+        values[square] = columns;
     });
     var gridValues = getGridValues(grid);
-    var count = 0;
     for (var s in gridValues) {
         var d = gridValues[s];
-        if (columnNames.indexOf(d) !== -1 && !assign(values, s, d)) {
+        if (columns.indexOf(d) !== -1 && !assign(values, s, d)) {
             return false;
         }
-        count++;
     }
     return values;
 };
 
 var assign = function (values, s, d) {
-    var otherValues = _.without(values[s], d);
+    var otherValues = values[s].replace(d, '');
     var res = true;
-    otherValues.forEach(function (d2) {
+    for (var i = 0; i < otherValues.length; i++) {
+        var d2 = otherValues[i];
         if (!eliminate(values, s, d2)) {
             res = false;
         }
-    });
+    }
     return res ? values : false;
 };
 
@@ -107,18 +107,12 @@ var eliminate = function (values, s, d) {
         return values;
     }
 
-    var updated = [];
-    values[s].forEach(function (v) {
-        if (v !== d) {
-            updated.push(v);
-        }
-    });
-    values[s] = updated;
+    values[s] = values[s].replace(d, '');
 
     if (values[s].length === 0) {
         return false;
     } else if (values[s].length === 1) {
-        var d2 = values[s][0];
+        var d2 = values[s];
         var res = true;
         peers[s].forEach(function (s2) {
             if (!eliminate(values, s2, d2)) {
@@ -130,13 +124,15 @@ var eliminate = function (values, s, d) {
         }
     }
 
-    units[s].forEach(function (u) {
+    for (var i = 0; i < units[s].length; i++) {
+        var u = units[s][i];
         var dplaces = [];
-        u.forEach(function (sq) {
+        for (var k = 0; k < u.length; k++) {
+            var sq = u[k];
             if (values[sq].indexOf(d) !== -1) {
                 dplaces.push(sq);
             }
-        });
+        }
 
         if (dplaces.length === 0) {
             return false;
@@ -145,37 +141,109 @@ var eliminate = function (values, s, d) {
                 return false;
             }
         }
-    });
+    }
 
     return values;
 };
 
-/*
-def solve(grid): return search(parse_grid(grid))
+var solve = function (grid) {
+    return search(parseGrid(grid));
+};
 
-def search(values):
-"Using depth-first search and propagation, try all possible values."
-if values is False:
-    return False ## Failed earlier
-if all(len(values[s]) == 1 for s in squares):
-return values ## Solved!
-## Chose the unfilled square s with the fewest possibilities
-n,s = min((len(values[s]), s) for s in squares if len(values[s]) > 1)
-return some(search(assign(values.copy(), s, d))
-    for d in values[s])
+var search = function (values) {
+    if (values === false) {
+        return false;
+    }
 
-def some(seq):
-"Return some element of seq that is true."
-for e in seq:
-if e: return e
-return False
-*/
+    var solved = _.every(squares, function (s) {
+        return (values[s].length === 1);
+    });
+    if (solved) {
+        return values;
+    }
 
-router.get('/', function (req, res) {
-    var grid = '4.....8.5.3..........7......2.....6.....8.4......1.......6.3.7.5..2.....1.4......'.split('');
-    // var grid = '003020600900305001001806400008102900700000008006708200002609500800203009005010300'.split('');
+    var n = 9;
+    var sq = 'A1';
+    for (var k = 0; k < squares.length; k++) {
+        var s = squares[k];
+        if (values[s].length > 1 && values[s].length < n) {
+            n = values[s].length;
+            sq = s;
+        }
+    }
+
+    for (var k = 0; k < values[sq].length; k++) {
+        var d = values[sq][k];
+        return some(search(assign(_.clone(values), s, d)));
+    }
+};
+
+var some = function (seq) {
+    for (var i = 0; i < seq.length; i++) {
+        var e = seq[i];
+        if (e) {
+            return e;
+        }
+    }
+    return false;
+};
+
+var validate = function (grid) {
     var values = parseGrid(grid);
-    res.status(200).json(values);
+    for (var i = 0; i < unitlist.length; i++) {
+        var unit = unitlist[i];
+        var validUnit = [false, false, false, false, false, false, false, false, false];
+        for (var k = 0; k < unit.length; k++) {
+            var square = unit[k];
+            var index = Number(values[square]) - 1;
+            validUnit[index] = true;
+        }
+        if (!_.every(validUnit, Boolean)) {
+            return false;
+        }
+    }
+    return true;
+};
+
+router.post('/', function (req, res, next) {
+    // Input validation
+    var grid = req.body.sudoku;
+    var validSudokuPattern = /^[0-9.]{81}$/;
+    if (!validSudokuPattern.test(grid)) {
+        var err = new Error('Invalid payload. Please send a valid sudoku string');
+        err.status = 400;
+        return next(err);
+    }
+    return next();
 });
+
+router.post('/solve', function (req, res) {
+    var grid = req.body.sudoku;
+    var values = solve(grid);
+    var solution = '';
+    for (var s in values) {
+        solution += values[s];
+    }
+    res.status(200).json({solution: solution});
+});
+
+router.post('/validate', function (req, res, next) {
+    var grid = req.body.sudoku;
+    var valid = validate(grid);
+    res.status(200).json({valid: valid});
+});
+
+//TODO: make a service which solves and validates
+//TODO: proper error handling, create a custom error object. Send response in format {error: {message: }}. Make it entirely JSON. Remove all render calls
+//TODO: dont commit node_modules
+//TODO: Add logger
+//TODO: Add configs
+
+//Cleanup sudoku1
+//write convenience methods like all or use lodash
+//cleanup for loops, find a good way to avoid reuse of variables like i, k
+//Add validations
+//make proper routes - /sudoku/solve etc
+//write a validate method
 
 module.exports = router;
