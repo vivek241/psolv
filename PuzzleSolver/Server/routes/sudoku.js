@@ -234,16 +234,9 @@ router.post('/validate', function (req, res, next) {
 });
 
 //TODO: make a service which solves and validates
-//TODO: proper error handling, create a custom error object. Send response in format {error: {message: }}. Make it entirely JSON. Remove all render calls
 //TODO: dont commit node_modules
 //TODO: Add logger
 //TODO: Add configs
-
-//Cleanup sudoku1
-//write convenience methods like all or use lodash
-//cleanup for loops, find a good way to avoid reuse of variables like i, k
-//Add validations
-//make proper routes - /sudoku/solve etc
-//write a validate method
+//TODO: Add unit tests?
 
 module.exports = router;
